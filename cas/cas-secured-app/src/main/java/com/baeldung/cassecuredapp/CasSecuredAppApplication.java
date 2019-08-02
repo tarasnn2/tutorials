@@ -4,6 +4,7 @@ import org.jasig.cas.client.session.SingleSignOutFilter;
 import org.jasig.cas.client.session.SingleSignOutHttpSessionListener;
 import org.jasig.cas.client.validation.Cas30ServiceTicketValidator;
 import org.jasig.cas.client.validation.TicketValidator;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -23,6 +24,19 @@ import javax.servlet.http.HttpSessionEvent;
 @SpringBootApplication
 public class CasSecuredAppApplication {
 
+    @Value("${cas.port}")
+    private String casPort;
+    @Value("${cas.host}")
+    private String casHost;
+    @Value("${cas.context-path}")
+    private String casContextPath;
+    @Value("${cas.login-form}")
+    private String casLoginForm;
+    @Value("${cas.logout-form}")
+    private String casLogoutForm;
+    @Value("${cas.web-protocol}")
+    private String casWebProtocol;
+
     public static void main(String[] args) {
         SpringApplication.run(CasSecuredAppApplication.class, args);
     }
@@ -30,8 +44,7 @@ public class CasSecuredAppApplication {
     @Bean
     public ServiceProperties serviceProperties() {
         ServiceProperties serviceProperties = new ServiceProperties();
-        serviceProperties.setService("http://localhost:9000/login/cas");
-        //serviceProperties.setService("http://localhost:9000");
+        serviceProperties.setService("http://localhost:38080/arm-uv/login/cas");
         serviceProperties.setSendRenew(false);
         return serviceProperties;
     }
@@ -40,8 +53,7 @@ public class CasSecuredAppApplication {
     @Primary
     public AuthenticationEntryPoint authenticationEntryPoint(ServiceProperties sP) {
         CasAuthenticationEntryPoint entryPoint = new CasAuthenticationEntryPoint();
-        //entryPoint.setLoginUrl("https://localhost:6443/cas/login");
-        entryPoint.setLoginUrl("http://dev.fss.local:18080/cas/login");
+        entryPoint.setLoginUrl(casWebProtocol + casHost + ":" + casPort + casContextPath + "/" + casLoginForm);
         entryPoint.setServiceProperties(sP);
         return entryPoint;
     }
@@ -49,8 +61,7 @@ public class CasSecuredAppApplication {
     @Bean
     public TicketValidator ticketValidator() {
         return new Cas30ServiceTicketValidator(
-                //"https://localhost:6443/cas"
-                "http://dev.fss.local:18080/cas"
+                casWebProtocol + casHost + ":" + casPort + casContextPath
         );
     }
 
@@ -59,10 +70,16 @@ public class CasSecuredAppApplication {
         CasAuthenticationProvider provider = new CasAuthenticationProvider();
         provider.setServiceProperties(serviceProperties());
         provider.setTicketValidator(ticketValidator());
-        provider.setUserDetailsService((s) -> new User("test@test.com", "smatt",
-                true, true, true, true,
-                AuthorityUtils.createAuthorityList("ROLE_ADMIN")));
-        provider.setKey("CAS_PROVIDER_LOCALHOST_9000");
+        provider.setUserDetailsService((s) ->
+                new User("test@test.com",
+                        "smatt",
+                        true,
+                        true,
+                        true,
+                        true,
+                        AuthorityUtils.createAuthorityList("ROLE_ADMIN"))
+        );
+        provider.setKey("CAS_PROVIDER_LOCALHOST_9000"); //TODO что это?
         return provider;
     }
 
@@ -75,20 +92,16 @@ public class CasSecuredAppApplication {
     @Bean
     public LogoutFilter logoutFilter() {
         LogoutFilter logoutFilter = new LogoutFilter(
-                //"https://localhost:6443/cas/logout",
-                "http://dev.fss.local:18080/cas/logout",
+                casWebProtocol + casHost + ":" + casPort + casContextPath + "/" + casLogoutForm,
                 securityContextLogoutHandler());
-        logoutFilter.setFilterProcessesUrl("/logout/cas");
+        logoutFilter.setFilterProcessesUrl("logout/cas"); //TODO это каса или апп?
         return logoutFilter;
     }
 
     @Bean
     public SingleSignOutFilter singleSignOutFilter() {
         SingleSignOutFilter singleSignOutFilter = new SingleSignOutFilter();
-        singleSignOutFilter.setCasServerUrlPrefix(
-                //"https://localhost:6443/cas"
-                "http://dev.fss.local:18080/cas"
-        );
+        singleSignOutFilter.setCasServerUrlPrefix(casWebProtocol + casHost + ":" + casContextPath);
         singleSignOutFilter.setIgnoreInitConfiguration(true);
         return singleSignOutFilter;
     }

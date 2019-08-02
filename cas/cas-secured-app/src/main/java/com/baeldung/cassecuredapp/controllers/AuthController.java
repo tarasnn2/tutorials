@@ -16,21 +16,22 @@ import javax.servlet.http.HttpServletResponse;
 @Controller
 public class AuthController {
 
-    private Logger logger = LogManager.getLogger(AuthController.class);
+    private Logger log = LogManager.getLogger(getClass());
 
-    @GetMapping("/logout")
-    public String logout(     HttpServletRequest request,
-                              HttpServletResponse response,
-                              SecurityContextLogoutHandler logoutHandler) {
+    @GetMapping("logout")
+    public String logout(HttpServletRequest request,
+                         HttpServletResponse response,
+                         SecurityContextLogoutHandler logoutHandler) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        logoutHandler.logout(request, response, auth );
+        logoutHandler.logout(request, response, auth);
         new CookieClearingLogoutHandler(AbstractRememberMeServices.SPRING_SECURITY_REMEMBER_ME_COOKIE_KEY).logout(request, response, auth);
+        log.info("logout");
         return "auth/logout";
     }
 
-
-    @GetMapping("/login")
+    @GetMapping("login")
     public String login() {
+        log.info("login");
         return "redirect:/secured";
     }
 
